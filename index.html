@@ -1,0 +1,568 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+</head>
+<body>
+<title>Дневник формы</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: «стена зала» — шапка с цифрами, дальше фигура тела слева и разбор мышц справа, ниже графики упражнений, календарь, состав тела и питание. */
+:root {
+  --bg: #f3f4f6;
+  --panel: #ffffff;
+  --ink: #15181e;
+  --muted: #5d6573;
+  --line: #dde1e7;
+  --steel: #c9ced8;        /* мышца без нагрузки */
+  --heat: #e2551b;         /* мышца на целевом объёме */
+  --accent: #2346d9;       /* графики, выбор */
+  --accent-soft: #e4e9fc;
+  --good: #11845b;
+  --warn: #b7791f;
+  --bad: #c43a31;
+  --neutral-part: #e6e8ec; /* голова, кисти, колени */
+  --f-display: "Unbounded", "Manrope", system-ui, sans-serif;
+  --f-body: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-data: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1216; --panel: #171b21; --ink: #eef0f3; --muted: #9aa3b1; --line: #2a303a;
+    --steel: #343b47; --heat: #ff6a2b; --accent: #7d98ff; --accent-soft: #1f2846;
+    --good: #3ccf8e; --warn: #e3a83b; --bad: #ff6b60; --neutral-part: #262b33; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1216; --panel: #171b21; --ink: #eef0f3; --muted: #9aa3b1; --line: #2a303a;
+  --steel: #343b47; --heat: #ff6a2b; --accent: #7d98ff; --accent-soft: #1f2846;
+  --good: #3ccf8e; --warn: #e3a83b; --bad: #ff6b60; --neutral-part: #262b33; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 24px 48px;
+}
+.wrap { max-width: 1120px; margin: 0 auto; display: grid; gap: 20px; }
+h1, h2 { font-family: var(--f-display); font-weight: 700; text-wrap: balance; margin: 0; letter-spacing: -0.01em; }
+h1 { font-size: clamp(26px, 4.4vw, 40px); line-height: 1.1; }
+h2 { font-size: 17px; font-weight: 500; }
+.eyebrow { font-size: 12px; text-transform: uppercase; letter-spacing: 0.09em; color: var(--muted); font-weight: 600; }
+.num { font-family: var(--f-data); font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 20px; min-width: 0; }
+.panel-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+
+/* Шапка */
+header { display: grid; gap: 18px; }
+.hero-line { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
+.pill { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 4px 11px; font-size: 13px; font-weight: 600; border: 1px solid var(--line); background: var(--panel); }
+.pill .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--heat); }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+.kpi { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; display: grid; gap: 2px; }
+.kpi .v { font-family: var(--f-display); font-size: 26px; font-weight: 700; line-height: 1.15; }
+.kpi .v small { font-family: var(--f-body); font-size: 14px; font-weight: 600; color: var(--muted); margin-left: 3px; }
+.delta { font-family: var(--f-data); font-size: 13px; font-weight: 600; }
+.delta.good { color: var(--good); } .delta.warn { color: var(--warn); } .delta.bad { color: var(--bad); }
+
+/* Тело */
+.body-grid { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 20px; }
+@media (max-width: 820px) { .body-grid { grid-template-columns: 1fr; } }
+.figures { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; align-items: start; }
+.figures figure { margin: 0; text-align: center; }
+.figures figcaption { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; }
+.figures svg { width: 100%; max-width: 230px; height: auto; display: block; margin: 0 auto; }
+.m { stroke: var(--panel); stroke-width: 1.5; cursor: pointer; transition: filter .15s, stroke .15s; }
+.m:hover, .m:focus { filter: brightness(1.12); outline: none; }
+.m.sel { stroke: var(--accent); stroke-width: 2.5; }
+.np { fill: var(--neutral-part); }
+.legend { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--muted); margin-top: 10px; justify-content: center; flex-wrap: wrap; }
+.legend .ramp { width: 140px; height: 10px; border-radius: 5px; background: linear-gradient(90deg, var(--steel), var(--heat)); }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; padding: 3px; gap: 2px; background: var(--bg); flex-wrap: wrap; }
+.seg button { font: inherit; font-size: 13px; font-weight: 600; border: 0; background: transparent; color: var(--muted); padding: 5px 10px; border-radius: 7px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--panel); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+.seg button:focus-visible, .ex-select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.mlist { display: grid; gap: 6px; }
+.mrow { display: grid; grid-template-columns: 128px minmax(0, 1fr) 62px; gap: 10px; align-items: center; padding: 6px 8px; border-radius: 8px; cursor: pointer; border: 1px solid transparent; background: none; font: inherit; color: inherit; text-align: left; width: 100%; }
+.mrow:hover { background: var(--bg); }
+.mrow.sel { border-color: var(--accent); background: var(--accent-soft); }
+.mrow .name { font-size: 14px; font-weight: 600; }
+.bar { position: relative; height: 10px; background: var(--bg); border-radius: 5px; overflow: hidden; border: 1px solid var(--line); }
+.bar i { position: absolute; inset: 0 auto 0 0; border-radius: 5px; }
+.bar b { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--ink); opacity: .55; }
+.mrow .val { font-family: var(--f-data); font-size: 13px; text-align: right; font-variant-numeric: tabular-nums; }
+.detail { margin-top: 14px; padding: 14px; border-radius: 10px; background: var(--bg); font-size: 14px; }
+.detail h3 { margin: 0 0 6px; font-size: 15px; }
+.detail ul { margin: 6px 0 0; padding-left: 18px; }
+
+/* Упражнения */
+.ex-pick { display: grid; gap: 4px; margin-bottom: 14px; max-width: 460px; }
+.ex-pick label { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; }
+.ex-select { font: inherit; font-size: 16px; font-weight: 600; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; width: 100%; cursor: pointer; }
+.chartbox { overflow-x: auto; }
+.chartbox svg { display: block; width: 100%; min-width: 560px; height: auto; }
+.sets-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; }
+.sets-table th, .sets-table td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.sets-table th { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; }
+.sets-table td.num { white-space: nowrap; }
+.setpill { display: inline-block; font-family: var(--f-data); font-size: 12px; padding: 1px 7px; border-radius: 6px; background: var(--bg); border: 1px solid var(--line); margin: 1px 3px 1px 0; }
+.setpill.top { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+
+/* Нижний ряд */
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+.cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+.cal .dow { font-size: 11px; color: var(--muted); text-align: center; font-weight: 600; text-transform: uppercase; }
+.day { aspect-ratio: 1; max-width: 100%; border-radius: 8px; background: var(--bg); border: 1px solid var(--line); display: grid; place-items: center; font-family: var(--f-data); font-size: 12px; color: var(--muted); position: relative; }
+.day.upper { background: var(--accent); color: #fff; border-color: var(--accent); }
+.day.lower { background: var(--heat); color: #fff; border-color: var(--heat); }
+.day.old { background: color-mix(in oklab, var(--ink) 55%, var(--bg)); color: var(--bg); border-color: transparent; }
+.day.today { outline: 2px solid var(--ink); outline-offset: 1px; }
+.day.empty { visibility: hidden; }
+.cal-legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--muted); margin-top: 10px; }
+.cal-legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; background: var(--c); }
+.comp { display: grid; gap: 14px; }
+.comp-row { display: grid; grid-template-columns: 150px minmax(0, 1fr) auto; gap: 12px; align-items: center; }
+.comp-row .lbl { font-size: 14px; font-weight: 600; }
+.comp-row .vals { font-family: var(--f-data); font-size: 14px; font-variant-numeric: tabular-nums; }
+.comp-row .vals .arrow { color: var(--muted); margin: 0 6px; }
+.note { font-size: 13px; color: var(--muted); margin-top: 12px; }
+@media (max-width: 460px) {
+  .comp-row { grid-template-columns: 1fr auto; }
+  .comp-row .vals { grid-column: 1 / -1; order: 3; }
+  .mrow { grid-template-columns: 104px minmax(0, 1fr) 54px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="hero-line">
+      <span class="eyebrow" id="today-label"></span>
+      <span class="pill"><span class="dot"></span><span id="phase-label"></span></span>
+    </div>
+    <h1 id="title"></h1>
+    <div class="kpis" id="kpis"></div>
+  </header>
+
+  <section class="panel" aria-labelledby="h-body">
+    <div class="panel-head">
+      <div>
+        <h2 id="h-body">Что нагружено</h2>
+        <div class="muted" style="font-size:13px">Рабочие подходы на мышцу. Чем горячее цвет, тем ближе к недельной цели из программы.</div>
+      </div>
+      <div class="seg" role="group" aria-label="Период" id="range"></div>
+    </div>
+    <div class="body-grid">
+      <div>
+        <div class="figures">
+          <figure><svg id="front" viewBox="0 0 200 400" role="img" aria-label="Тело спереди"></svg><figcaption>Спереди</figcaption></figure>
+          <figure><svg id="back" viewBox="0 0 200 400" role="img" aria-label="Тело сзади"></svg><figcaption>Сзади</figcaption></figure>
+        </div>
+        <div class="legend"><span>0</span><span class="ramp"></span><span>цель недели</span></div>
+      </div>
+      <div>
+        <div class="mlist" id="mlist"></div>
+        <div class="detail" id="detail"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" aria-labelledby="h-ex">
+    <div class="panel-head">
+      <h2 id="h-ex">Прогресс по упражнениям</h2>
+      <span class="muted" style="font-size:13px">Лучший подход тренировки: вес × повторы</span>
+    </div>
+    <div class="ex-pick"><label for="ex-select">Упражнение</label><select id="ex-select" class="ex-select"></select></div>
+    <div class="chartbox"><svg id="chart" viewBox="0 0 720 260" aria-label="График упражнения"></svg></div>
+    <div class="chartbox"><table class="sets-table" id="sets"></table></div>
+  </section>
+
+  <div class="two">
+    <section class="panel" aria-labelledby="h-cal">
+      <div class="panel-head"><h2 id="h-cal">Календарь</h2><span class="muted num" id="cal-sum" style="font-size:13px"></span></div>
+      <div class="cal" id="cal"></div>
+      <div class="cal-legend">
+        <span style="--c: var(--accent)">Верх</span>
+        <span style="--c: var(--heat)">Низ</span>
+        <span style="--c: color-mix(in oklab, var(--ink) 55%, var(--bg))">До программы (тяга/жим/ноги)</span>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="h-comp">
+      <div class="panel-head"><h2 id="h-comp">Состав тела</h2><span class="muted num" id="comp-dates" style="font-size:13px"></span></div>
+      <div class="comp" id="comp"></div>
+      <p class="note">Весы Technogym, биоимпеданс. Абсолютные цифры жира у таких весов неточны, смотри на направление за несколько замеров при одинаковых условиях.</p>
+    </section>
+  </div>
+
+  <section class="panel" aria-labelledby="h-food">
+    <div class="panel-head"><h2 id="h-food">Питание</h2><span class="muted" style="font-size:13px" id="food-sub"></span></div>
+    <div class="chartbox"><svg id="food" viewBox="0 0 720 220" aria-label="Калории и белок по дням"></svg></div>
+    <p class="note">Оценки по фото и описаниям, погрешность порций ±20–30%.</p>
+  </section>
+</div>
+
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script>
+async function loadDashboardData() {
+  const fail = (msg) => {
+    document.querySelector('.wrap').innerHTML = '<section class="panel"><h2>Дашборд закрыт</h2><p class="muted">' + msg + '</p></section>';
+    return null;
+  };
+  const k = new URLSearchParams(location.search).get('k');
+  if (!k) return fail('Открой дашборд кнопкой в своём Телеграм-боте.');
+  try {
+    const res = await fetch('data.enc?v=mwvr1a0m', { cache: 'no-store' });
+    if (!res.ok) return fail('Данных пока нет.');
+    const enc = await res.json();
+    const b64 = (s) => Uint8Array.from(atob(s), (ch) => ch.charCodeAt(0));
+    const raw = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(k));
+    const key = await crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['decrypt']);
+    const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64(enc.iv) }, key, b64(enc.ct));
+    return JSON.parse(new TextDecoder().decode(plain));
+  } catch (e) {
+    return fail('Не получилось открыть данные. Открой дашборд кнопкой в боте.');
+  }
+}
+</script>
+<script>
+(async () => {
+const tg = window.Telegram && window.Telegram.WebApp;
+if (tg && tg.initData !== undefined) { tg.ready(); tg.expand(); if (tg.colorScheme) document.documentElement.dataset.theme = tg.colorScheme; }
+const D = await loadDashboardData();
+if (!D) return;
+// Страница может прийти уже отрисованной (prerender.mjs для Телеграма) — чистим, чтобы не рисовать дважды.
+['kpis', 'front', 'back', 'range', 'ex-select', 'cal', 'comp', 'food', 'mlist', 'detail', 'chart', 'sets'].forEach((id) => { const e = document.getElementById(id); if (e) e.innerHTML = ''; });
+
+const MUSCLE = {
+  chest: 'Грудь', 'back-lats': 'Широчайшие', 'back-upper': 'Верх спины', 'lower-back': 'Поясница',
+  'shoulders-front': 'Передняя дельта', 'shoulders-side': 'Средняя дельта', 'shoulders-rear': 'Задняя дельта',
+  biceps: 'Бицепс', triceps: 'Трицепс', forearms: 'Предплечья', abs: 'Пресс',
+  quads: 'Квадрицепс', hamstrings: 'Бицепс бедра', glutes: 'Ягодицы', calves: 'Икры'
+};
+const UPPER = new Set(['Верх А', 'Верх Б']), LOWER = new Set(['Низ А', 'Низ Б']);
+const fmt = (n, d = 1) => n == null || isNaN(n) ? '—' : (+n.toFixed(d)).toLocaleString('ru-RU');
+const dm = (iso) => iso.slice(8, 10) + '.' + iso.slice(5, 7);
+const dayDiff = (a, b) => Math.round((new Date(b) - new Date(a)) / 864e5);
+const addDays = (iso, n) => { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+const el = (tag, attrs = {}, html = '') => { const e = document.createElement(tag); for (const k in attrs) e.setAttribute(k, attrs[k]); e.innerHTML = html; return e; };
+const svgEl = (tag, attrs = {}) => { const e = document.createElementNS('http://www.w3.org/2000/svg', tag); for (const k in attrs) e.setAttribute(k, attrs[k]); return e; };
+const plural = (n, a, b, c) => { const m10 = n % 10, m100 = n % 100; return m10 === 1 && m100 !== 11 ? a : m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20) ? b : c; };
+
+/* ---------- Шапка ---------- */
+const sess = D.sessions.filter((s) => s.status === 'done');
+const last = sess[sess.length - 1];
+document.getElementById('today-label').textContent = 'Сегодня ' + dm(D.today) + ' · последняя тренировка ' + dm(last.date) + ' (' + last.session + ')';
+const phaseName = { cut: 'Сушка', bulk: 'Набор', maintenance: 'Поддержание' }[D.phase?.name] || D.phase?.name || 'Фаза не задана';
+const phaseDays = D.phase ? dayDiff(D.phase.from, D.today) + 1 : null;
+document.getElementById('phase-label').textContent = phaseName + (phaseDays ? ' · день ' + phaseDays : '');
+document.getElementById('title').textContent = D.athlete + ', вот твоя форма';
+
+const b0 = D.body[0], b1 = D.body[D.body.length - 1];
+const bodySpanDays = b0 && b1 ? dayDiff(b0.date, b1.date) : 0;
+const perWeek = bodySpanDays ? (b1.weight - b0.weight) / bodySpanDays * 7 : null;
+const totalSets = D.sets.length;
+const sinceProg = sess.filter((s) => s.date >= D.started);
+const kpis = [
+  { l: 'Тренировок', v: sess.length, u: '', d: 'с ' + dm(sess[0].date) + ' · с ' + dm(D.started) + ': ' + sinceProg.length },
+  { l: 'Подходов', v: totalSets, u: '', d: 'в среднем ' + Math.round(sess.reduce((a, s) => a + (s.duration_min || 0), 0) / sess.length) + ' мин на тренировку' },
+  b1 && { l: 'Вес', v: fmt(b1.weight), u: 'кг', d: (b1.weight - b0.weight <= 0 ? '−' : '+') + fmt(Math.abs(b1.weight - b0.weight)) + ' кг с ' + dm(b0.date), cls: b1.weight < b0.weight ? 'good' : 'warn',
+        sub: perWeek != null ? '≈ ' + fmt(Math.abs(perWeek), 2) + ' кг в неделю' : '' },
+  b1 && { l: 'Жир', v: fmt(b1.fatKg), u: 'кг', d: (b1.fatKg - b0.fatKg <= 0 ? '−' : '+') + fmt(Math.abs(b1.fatKg - b0.fatKg)) + ' кг', cls: b1.fatKg < b0.fatKg ? 'good' : 'warn', sub: fmt(b0.fatPct) + '% → ' + fmt(b1.fatPct) + '%' },
+  b1 && { l: 'Скелетные мышцы', v: fmt(b1.muscle), u: 'кг', d: (b1.muscle - b0.muscle < 0 ? '−' : '+') + fmt(Math.abs(b1.muscle - b0.muscle)) + ' кг', cls: b1.muscle >= b0.muscle ? 'good' : 'warn', sub: 'держим мышцы на сушке' },
+].filter(Boolean);
+const kbox = document.getElementById('kpis');
+for (const k of kpis) {
+  kbox.append(el('div', { class: 'kpi' },
+    `<span class="eyebrow">${k.l}</span><span class="v num">${k.v}<small>${k.u}</small></span>` +
+    `<span class="delta ${k.cls || ''}" style="${k.cls ? '' : 'color:var(--muted);font-weight:500'}">${k.d}</span>` +
+    (k.sub ? `<span class="muted" style="font-size:12px">${k.sub}</span>` : '')));
+}
+
+/* ---------- Фигура ---------- */
+// Каждая мышца — набор фигур; правые копируются зеркально.
+const FRONT = [
+  ['np', 'ellipse', { cx: 100, cy: 30, rx: 17, ry: 21 }],
+  ['np', 'path', { d: 'M91 48 h18 v14 h-18z' }],
+  ['back-upper', 'path', { d: 'M91 56 L74 68 L90 66 Z' }, true],
+  ['shoulders-side', 'ellipse', { cx: 58, cy: 82, rx: 10, ry: 16 }, true],
+  ['shoulders-front', 'path', { d: 'M74 66 Q60 70 62 92 Q70 100 78 92 Q80 76 74 66 Z' }, true],
+  ['chest', 'path', { d: 'M98 68 L78 70 Q72 82 76 100 Q86 112 98 106 Z' }, true],
+  ['biceps', 'path', { d: 'M54 96 Q46 112 48 134 Q55 142 62 134 Q66 112 62 98 Z' }, true],
+  ['forearms', 'path', { d: 'M48 140 Q38 160 40 186 Q46 192 52 186 Q60 162 60 142 Z' }, true],
+  ['np', 'ellipse', { cx: 45, cy: 198, rx: 7, ry: 10 }, true],
+  ['abs', 'path', { d: 'M86 110 L114 110 Q116 150 112 176 L88 176 Q84 150 86 110 Z' }],
+  ['abs', 'path', { d: 'M82 112 Q76 140 82 172 L86 172 Q83 140 85 112 Z' }, true],
+  ['np', 'path', { d: 'M82 178 L118 178 L112 198 L100 204 L88 198 Z' }],
+  ['quads', 'path', { d: 'M80 186 Q70 228 76 276 Q86 286 96 278 Q100 236 99 202 L88 198 Z' }, true],
+  ['np', 'ellipse', { cx: 86, cy: 290, rx: 9, ry: 9 }, true],
+  ['calves', 'path', { d: 'M78 300 Q72 326 80 354 L86 354 Q84 326 84 302 Z' }, true],
+  ['np', 'path', { d: 'M86 302 Q92 330 90 362 L84 362 Q86 330 84 302 Z' }, true],
+  ['np', 'path', { d: 'M78 364 L94 364 Q96 374 92 378 L74 378 Q72 370 78 364 Z' }, true],
+];
+const BACK = [
+  ['np', 'ellipse', { cx: 100, cy: 30, rx: 17, ry: 21 }],
+  ['np', 'path', { d: 'M91 48 h18 v10 h-18z' }],
+  ['back-upper', 'path', { d: 'M100 54 L74 68 L84 104 L100 114 L116 104 L126 68 Z' }],
+  ['shoulders-rear', 'path', { d: 'M74 68 Q58 70 58 92 Q66 100 76 92 Q80 78 74 68 Z' }, true],
+  ['back-lats', 'path', { d: 'M82 102 L72 92 Q68 128 86 160 L98 150 L98 116 Z' }, true],
+  ['triceps', 'path', { d: 'M56 96 Q46 112 48 134 Q55 142 62 134 Q68 112 66 98 Z' }, true],
+  ['forearms', 'path', { d: 'M48 140 Q38 160 40 186 Q46 192 52 186 Q60 162 60 142 Z' }, true],
+  ['np', 'ellipse', { cx: 45, cy: 198, rx: 7, ry: 10 }, true],
+  ['lower-back', 'path', { d: 'M88 152 L112 152 L114 182 L86 182 Z' }],
+  ['glutes', 'path', { d: 'M99 184 L84 184 Q74 196 78 214 Q90 224 99 216 Z' }, true],
+  ['hamstrings', 'path', { d: 'M80 220 Q72 248 78 280 Q88 288 97 280 Q100 250 99 222 Q90 228 80 220 Z' }, true],
+  ['np', 'ellipse', { cx: 87, cy: 292, rx: 9, ry: 8 }, true],
+  ['calves', 'path', { d: 'M78 302 Q68 326 78 350 Q86 356 94 348 Q98 326 94 302 Z' }, true],
+  ['np', 'path', { d: 'M80 356 L92 356 L92 366 L80 366 Z' }, true],
+  ['np', 'path', { d: 'M78 368 L94 368 Q96 376 92 380 L74 380 Q72 372 78 368 Z' }, true],
+];
+
+const shapes = {};
+function drawFigure(svg, parts) {
+  for (const [key, tag, attrs, mirror] of parts) {
+    for (const side of mirror ? [0, 1] : [0]) {
+      const s = svgEl(tag, attrs);
+      if (side) s.setAttribute('transform', 'translate(200 0) scale(-1 1)');
+      if (key === 'np') s.setAttribute('class', 'np');
+      else {
+        s.setAttribute('class', 'm'); s.setAttribute('tabindex', '0'); s.dataset.m = key;
+        s.setAttribute('aria-label', MUSCLE[key]);
+        s.addEventListener('click', () => select(key));
+        s.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); select(key); } });
+        const t = svgEl('title'); t.textContent = MUSCLE[key]; s.append(t);
+        (shapes[key] = shapes[key] || []).push(s);
+      }
+      svg.append(s);
+    }
+  }
+}
+drawFigure(document.getElementById('front'), FRONT);
+drawFigure(document.getElementById('back'), BACK);
+
+const RANGES = [
+  { id: '7d', label: '7 дней', from: addDays(D.today, -6), weeks: 1 },
+  { id: 'prog', label: 'По программе (с ' + dm(D.started) + ')', from: D.started, weeks: Math.max(1, (dayDiff(D.started, D.today) + 1) / 7) },
+  { id: 'all', label: 'Всё время', from: D.sets[0]?.date, weeks: Math.max(1, (dayDiff(D.sets[0]?.date, D.today) + 1) / 7) },
+];
+let range = RANGES[0], selected = null;
+const rangeBox = document.getElementById('range');
+for (const r of RANGES) {
+  const b = el('button', { type: 'button', 'aria-pressed': r === range }, r.label);
+  b.addEventListener('click', () => { range = r; [...rangeBox.children].forEach((c) => c.setAttribute('aria-pressed', c === b)); renderBody(); });
+  rangeBox.append(b);
+}
+
+function volume() {
+  const v = {}, ex = {};
+  for (const s of D.sets) {
+    if (s.date < range.from || s.date > D.today) continue;
+    const ms = D.muscles[s.exercise]; if (!ms || !ms.length) continue;
+    const m = ms[0];
+    v[m] = (v[m] || 0) + 1;
+    ((ex[m] = ex[m] || {})[s.exercise] = (ex[m][s.exercise] || 0) + 1);
+  }
+  return { v, ex };
+}
+// Насколько «горячая» мышца: подходы в неделю / цель (если цели нет — / 8)
+const ratio = (m, sets) => Math.min(1, (sets / range.weeks) / (D.targets[m] || 8));
+
+function renderBody() {
+  const { v, ex } = volume();
+  for (const m in shapes) for (const s of shapes[m]) {
+    const r = ratio(m, v[m] || 0);
+    s.style.fill = `color-mix(in oklab, var(--heat) ${Math.round(r * 100)}%, var(--steel))`;
+    s.classList.toggle('sel', m === selected);
+  }
+  const list = document.getElementById('mlist'); list.innerHTML = '';
+  const keys = Object.keys(MUSCLE).sort((a, b) => (v[b] || 0) - (v[a] || 0));
+  for (const m of keys) {
+    const sets = v[m] || 0, perW = sets / range.weeks, tgt = D.targets[m];
+    const max = Math.max(tgt || 0, 16);
+    const row = el('button', { type: 'button', class: 'mrow' + (m === selected ? ' sel' : '') },
+      `<span class="name">${MUSCLE[m]}</span>
+       <span class="bar"><i style="width:${Math.min(100, perW / max * 100)}%;background:color-mix(in oklab, var(--heat) ${Math.round(ratio(m, sets) * 100)}%, var(--steel))"></i>${tgt ? `<b style="left:${tgt / max * 100}%" title="цель ${tgt}"></b>` : ''}</span>
+       <span class="val">${range.weeks > 1 ? fmt(perW) + '/нед' : sets}${tgt ? `<span class="muted"> /${tgt}</span>` : ''}</span>`);
+    row.addEventListener('click', () => select(m));
+    list.append(row);
+  }
+  renderDetail(v, ex);
+}
+
+function renderDetail(v, ex) {
+  const box = document.getElementById('detail');
+  if (!selected) {
+    box.innerHTML = `<h3>Нажми на мышцу</h3><span class="muted">На фигуре или в списке — покажу, какие упражнения её нагрузили за выбранный период. Чёрная риска на полоске — недельная цель из программы.</span>`;
+    return;
+  }
+  const sets = v[selected] || 0, tgt = D.targets[selected];
+  const items = Object.entries(ex[selected] || {}).sort((a, b) => b[1] - a[1]);
+  let verdict = '';
+  if (tgt) {
+    const perW = sets / range.weeks;
+    verdict = perW >= tgt ? `<span class="delta good">цель недели закрыта</span>` : `<span class="delta warn">до цели ${fmt(tgt - perW)} подх./нед</span>`;
+  } else verdict = '<span class="muted">отдельной цели в программе нет</span>';
+  box.innerHTML = `<h3>${MUSCLE[selected]} · <span class="num">${sets}</span> ${plural(sets, 'подход', 'подхода', 'подходов')}</h3>${verdict}` +
+    (items.length ? `<ul>${items.map(([n, c]) => `<li>${n} — <span class="num">${c}</span></li>`).join('')}</ul>` : `<div class="muted" style="margin-top:6px">За этот период не нагружалась как основная мышца.</div>`);
+}
+function select(m) { selected = selected === m ? null : m; renderBody(); }
+renderBody();
+
+/* ---------- Упражнения ---------- */
+const byEx = {};
+for (const s of D.sets) ((byEx[s.exercise] = byEx[s.exercise] || {})[s.date] = byEx[s.exercise][s.date] || []).push(s);
+const better = (a, b) => (a.load ?? 0) > (b.load ?? 0) || ((a.load ?? 0) === (b.load ?? 0) && a.reps > b.reps);
+const exList = Object.entries(byEx).map(([name, days]) => {
+  const dates = Object.keys(days).sort();
+  const tops = dates.map((d) => days[d].reduce((t, s) => better(s, t) ? s : t));
+  return { name, dates, tops, days };
+}).sort((a, b) => b.dates.length - a.dates.length || a.name.localeCompare(b.name, 'ru'));
+let exSel = exList.find((e) => e.name === 'Жим ногами') || exList[0];
+
+const exSelect = document.getElementById('ex-select');
+for (const e of exList) {
+  const f = e.tops[0], l = e.tops[e.tops.length - 1];
+  const n = e.dates.length;
+  let tag = n + ' ' + plural(n, 'тренировка', 'тренировки', 'тренировок');
+  if (n > 1 && f.load != null && l.load != null) {
+    const dl = l.load - f.load;
+    tag = (dl > 0 ? '▲ +' + fmt(dl) + ' кг' : dl < 0 ? '▼ −' + fmt(-dl) + ' кг' : l.reps > f.reps ? '▲ +' + (l.reps - f.reps) + ' повт.' : 'без изменений') + ' · ' + tag;
+  }
+  const o = el('option', { value: e.name });
+  o.textContent = e.name + ' — ' + tag;
+  if (e === exSel) o.setAttribute('selected', '');
+  exSelect.append(o);
+}
+exSelect.value = exSel.name;
+exSelect.addEventListener('change', () => { exSel = exList.find((e) => e.name === exSelect.value) || exSel; renderChart(); });
+
+function renderChart() {
+  const svg = document.getElementById('chart'); svg.innerHTML = '';
+  const W = 720, H = 260, L = 52, R = 24, T = 30, B = 40;
+  const e = exSel, pts = e.tops;
+  const loads = pts.map((p) => p.load ?? 0);
+  let lo = Math.min(...loads), hi = Math.max(...loads);
+  const pad = Math.max(2.5, (hi - lo) * 0.25 || hi * 0.1);
+  lo = Math.max(0, lo - pad); hi = hi + pad;
+  const step = niceStep((hi - lo) / 4);
+  lo = Math.floor(lo / step) * step; hi = Math.ceil(hi / step) * step;
+  const x = (i) => pts.length === 1 ? (L + W - R) / 2 : L + i * (W - L - R) / (pts.length - 1);
+  const y = (v) => T + (hi - v) / (hi - lo) * (H - T - B);
+  for (let v = lo; v <= hi + 1e-9; v += step) {
+    svg.append(svgEl('line', { x1: L, x2: W - R, y1: y(v), y2: y(v), stroke: 'var(--line)', 'stroke-width': 1 }));
+    const t = svgEl('text', { x: L - 8, y: y(v) + 4, 'text-anchor': 'end', 'font-size': 11, fill: 'var(--muted)', 'font-family': 'var(--f-data)' });
+    t.textContent = fmt(v); svg.append(t);
+  }
+  const kg = svgEl('text', { x: L - 8, y: T - 14, 'text-anchor': 'end', 'font-size': 11, fill: 'var(--muted)' }); kg.textContent = 'кг'; svg.append(kg);
+  if (pts.length > 1) {
+    const d = pts.map((p, i) => (i ? 'L' : 'M') + x(i) + ' ' + y(p.load ?? 0)).join(' ');
+    svg.append(svgEl('path', { d: d + ` L${x(pts.length - 1)} ${H - B} L${x(0)} ${H - B} Z`, fill: 'var(--accent)', opacity: 0.1 }));
+    svg.append(svgEl('path', { d, fill: 'none', stroke: 'var(--accent)', 'stroke-width': 2.5, 'stroke-linejoin': 'round' }));
+  }
+  pts.forEach((p, i) => {
+    const lastPt = i === pts.length - 1;
+    svg.append(svgEl('circle', { cx: x(i), cy: y(p.load ?? 0), r: lastPt ? 6 : 4.5, fill: lastPt ? 'var(--accent)' : 'var(--panel)', stroke: 'var(--accent)', 'stroke-width': 2.5 }));
+    const anchor = pts.length > 1 && i === 0 ? 'start' : pts.length > 1 && lastPt ? 'end' : 'middle';
+    const lab = svgEl('text', { x: x(i) + (anchor === 'start' ? -6 : anchor === 'end' ? 6 : 0), y: y(p.load ?? 0) - 14, 'text-anchor': anchor, 'font-size': 12, 'font-weight': 600, fill: 'var(--ink)', 'font-family': 'var(--f-data)' });
+    lab.textContent = (p.load != null ? fmt(p.load) : 'св.') + '×' + p.reps + (p.rpe != null ? ' @' + fmt(p.rpe) : '');
+    svg.append(lab);
+    const dl = svgEl('text', { x: x(i), y: H - B + 20, 'text-anchor': 'middle', 'font-size': 11, fill: 'var(--muted)', 'font-family': 'var(--f-data)' });
+    dl.textContent = dm(e.dates[i]); svg.append(dl);
+  });
+
+  const tbl = document.getElementById('sets');
+  tbl.innerHTML = '<thead><tr><th>Дата</th><th>Тренировка</th><th>Подходы (вес×повт @RPE)</th><th>Тоннаж</th></tr></thead>';
+  const tb = el('tbody');
+  [...e.dates].reverse().forEach((d) => {
+    const ss = e.days[d], top = ss.reduce((t, s) => better(s, t) ? s : t);
+    const ton = ss.reduce((a, s) => a + (s.load || 0) * s.reps, 0);
+    tb.append(el('tr', {}, `<td class="num">${dm(d)}</td><td>${ss[0].session}</td><td>${ss.map((s) => `<span class="setpill${s === top ? ' top' : ''}">${s.load != null ? fmt(s.load) : 'св.'}×${s.reps}${s.rpe != null ? ' @' + fmt(s.rpe) : ''}</span>`).join('')}</td><td class="num">${fmt(ton, 0)} кг</td>`));
+  });
+  tbl.append(tb);
+}
+function niceStep(raw) { const p = Math.pow(10, Math.floor(Math.log10(raw || 1))); const n = raw / p; return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 2.5 ? 2.5 : n <= 5 ? 5 : 10) * p; }
+renderChart();
+
+/* ---------- Календарь ---------- */
+(function () {
+  const cal = document.getElementById('cal');
+  ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].forEach((d) => cal.append(el('div', { class: 'dow' }, d)));
+  const byDate = Object.fromEntries(sess.map((s) => [s.date, s]));
+  const start = sess[0].date;
+  const dow = (iso) => (new Date(iso + 'T00:00:00Z').getUTCDay() + 6) % 7;
+  for (let i = 0; i < dow(start); i++) cal.append(el('div', { class: 'day empty' }));
+  for (let d = start; d <= D.today; d = addDays(d, 1)) {
+    const s = byDate[d];
+    const cls = s ? (UPPER.has(s.session) ? 'upper' : LOWER.has(s.session) ? 'lower' : 'old') : '';
+    const c = el('div', { class: 'day ' + cls + (d === D.today ? ' today' : ''), title: s ? `${dm(d)} · ${s.session} · ${s.sets} подх. · ${s.duration_min ?? '—'} мин` : dm(d) + ' · отдых' }, d.slice(8, 10).replace(/^0/, ''));
+    cal.append(c);
+  }
+  const span = dayDiff(start, D.today) + 1;
+  document.getElementById('cal-sum').textContent = `${sess.length} из ${span} дней · ${fmt(sess.length / span * 7)} в неделю`;
+})();
+
+/* ---------- Состав тела ---------- */
+(function () {
+  const box = document.getElementById('comp');
+  if (D.body.length < 1) { box.innerHTML = '<span class="muted">Замеров пока нет.</span>'; return; }
+  document.getElementById('comp-dates').textContent = D.body.map((b) => dm(b.date)).join(' → ');
+  const rows = [
+    ['Вес', 'weight', 'кг', -1], ['Жир', 'fatKg', 'кг', -1], ['Жир, %', 'fatPct', '%', -1],
+    ['Скелетные мышцы', 'muscle', 'кг', 1], ['Безжировая масса', 'lean', 'кг', 1], ['Фазовый угол', 'phase', '°', 1], ['Балл Technogym', 'score', '', 1],
+  ];
+  for (const [label, k, u, dir] of rows) {
+    const vals = D.body.map((b) => b[k]).filter((v) => v != null && !isNaN(v));
+    if (!vals.length) continue;
+    const a = vals[0], z = vals[vals.length - 1], d = z - a;
+    const cls = d === 0 ? '' : (d * dir > 0 ? 'good' : 'warn');
+    box.append(el('div', { class: 'comp-row' },
+      `<span class="lbl">${label}</span><span class="vals">${fmt(a)}<span class="arrow">→</span><strong>${fmt(z)}</strong> ${u}</span>` +
+      `<span class="delta ${cls}">${d > 0 ? '+' : d < 0 ? '−' : '±'}${fmt(Math.abs(d))}</span>`));
+  }
+})();
+
+/* ---------- Питание ---------- */
+(function () {
+  const svg = document.getElementById('food');
+  const M = D.meals;
+  if (!M.length) { svg.outerHTML = '<span class="muted">Дневник питания пуст.</span>'; return; }
+  document.getElementById('food-sub').textContent = `Цель: ~${D.kcalTarget?.toLocaleString('ru-RU')} ккал и ~${D.proteinTarget} г белка в день`;
+  const W = 720, H = 220, L = 56, R = 56, T = 24, B = 36;
+  const kMax = Math.ceil(Math.max(D.kcalTarget || 0, ...M.map((m) => m.kcal)) * 1.15 / 500) * 500;
+  const pMax = Math.ceil(Math.max(D.proteinTarget || 0, ...M.map((m) => m.protein)) * 1.15 / 50) * 50;
+  const slot = (W - L - R) / M.length, bw = Math.min(70, slot * 0.5);
+  const yk = (v) => T + (1 - v / kMax) * (H - T - B), yp = (v) => T + (1 - v / pMax) * (H - T - B);
+  for (let v = 0; v <= kMax; v += 500) {
+    svg.append(svgEl('line', { x1: L, x2: W - R, y1: yk(v), y2: yk(v), stroke: 'var(--line)' }));
+    const t = svgEl('text', { x: L - 8, y: yk(v) + 4, 'text-anchor': 'end', 'font-size': 11, fill: 'var(--muted)', 'font-family': 'var(--f-data)' }); t.textContent = v.toLocaleString('ru-RU'); svg.append(t);
+  }
+  for (let v = 0; v <= pMax; v += 50) {
+    const t = svgEl('text', { x: W - R + 8, y: yp(v) + 4, 'font-size': 11, fill: 'var(--good)', 'font-family': 'var(--f-data)' }); t.textContent = v; svg.append(t);
+  }
+  const lk = svgEl('text', { x: L - 8, y: 12, 'text-anchor': 'end', 'font-size': 11, fill: 'var(--muted)' }); lk.textContent = 'ккал'; svg.append(lk);
+  const lp = svgEl('text', { x: W - R + 8, y: 12, 'font-size': 11, fill: 'var(--good)' }); lp.textContent = 'белок, г'; svg.append(lp);
+  M.forEach((m, i) => {
+    const cx = L + slot * (i + 0.5);
+    svg.append(svgEl('rect', { x: cx - bw / 2, y: yk(m.kcal), width: bw, height: yk(0) - yk(m.kcal), rx: 6, fill: 'var(--steel)' }));
+    const t = svgEl('text', { x: cx, y: yk(m.kcal) - 8, 'text-anchor': 'middle', 'font-size': 12, 'font-weight': 600, fill: 'var(--ink)', 'font-family': 'var(--f-data)' }); t.textContent = m.kcal.toLocaleString('ru-RU'); svg.append(t);
+    const d = svgEl('text', { x: cx, y: H - B + 20, 'text-anchor': 'middle', 'font-size': 11, fill: 'var(--muted)', 'font-family': 'var(--f-data)' }); d.textContent = dm(m.date); svg.append(d);
+    const ok = m.protein >= (D.proteinTarget || 0);
+    svg.append(svgEl('circle', { cx: cx + bw / 2 + 12, cy: yp(m.protein), r: 6, fill: ok ? 'var(--good)' : 'var(--warn)' }));
+    const pt = svgEl('text', { x: cx + bw / 2 + 22, y: yp(m.protein) + 4, 'font-size': 11, fill: 'var(--good)', 'font-family': 'var(--f-data)' }); pt.textContent = m.protein; svg.append(pt);
+  });
+  if (D.kcalTarget) {
+    svg.append(svgEl('line', { x1: L, x2: W - R, y1: yk(D.kcalTarget), y2: yk(D.kcalTarget), stroke: 'var(--heat)', 'stroke-width': 2, 'stroke-dasharray': '6 5' }));
+    const t = svgEl('text', { x: L + 6, y: yk(D.kcalTarget) - 6, 'font-size': 11, fill: 'var(--heat)', 'font-weight': 600 }); t.textContent = 'цель ' + D.kcalTarget.toLocaleString('ru-RU'); svg.append(t);
+  }
+})();
+})();
+</script>
+
+</body>
+</html>
