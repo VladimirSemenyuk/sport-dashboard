@@ -218,7 +218,7 @@ async function loadDashboardData() {
   const k = new URLSearchParams(location.search).get('k');
   if (!k) return fail('Открой дашборд кнопкой в своём Телеграм-боте.');
   try {
-    const res = await fetch('data.enc?v=mww0l4au', { cache: 'no-store' });
+    const res = await fetch('data.enc?v=mwxgeftg', { cache: 'no-store' });
     if (!res.ok) return fail('Данных пока нет.');
     const enc = await res.json();
     const b64 = (s) => Uint8Array.from(atob(s), (ch) => ch.charCodeAt(0));
